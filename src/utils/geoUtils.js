@@ -1,3 +1,35 @@
+const geocodeCache = new Map();
+
+export const cachedGeocode = async (query) => {
+  if (geocodeCache.has(query)) return geocodeCache.get(query);
+  const result = await temporaryGeocode(query);
+  geocodeCache.set(query, result);
+  return result;
+};
+
+export const temporaryGeocode = async (query) => {
+  const response = await fetch(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN}`
+  );
+  if (!response.ok) throw new Error('Geocoding failed');
+  return await response.json();
+};
+
+export const permanentGeocode = async (query) => {
+  const response = await fetch(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places-permanent/${encodeURIComponent(query)}.json?access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN}`
+  );
+  if (!response.ok) throw new Error('Geocoding failed');
+  return await response.json();
+};
+
+// Helper function to extract coordinates from result
+export const getCoordinates = (geocodeResult) => {
+  if (!geocodeResult.features || geocodeResult.features.length === 0) return null;
+  return geocodeResult.features[0].center; // [longitude, latitude]
+};
+
+
 export async function getMapboxPOIs(lat, lng, category) {
   const response = await fetch(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${category}.json?proximity=${lng},${lat}&access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN}`

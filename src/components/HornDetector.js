@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { getMapboxPOIs } from '../utils/geoUtils';
+import { temporaryGeocode, getCoordinates } from '../utils/geoUtils';
 
 // Initialize Mapbox
-mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtNmtvZWN0aTAwOXcyaW9xenp4d3pqYmEifQ.5tnD481rFb6OmHTpi2ujCA';
+mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtY2Rhc2d6azBnemkya3NhN3FtN2pud3AifQ.9Pffdl35floWurrolAs55Q';
 
 const NO_HONK_ZONES = [
   { lat: 18.6300, lng: 73.8200, name: "Central School Zone", radius: 1000 },
@@ -21,6 +22,7 @@ const NO_HONK_ZONES = [
 ];
 
 const HornDetector = () => {
+  // Existing state variables
   const [position, setPosition] = useState(null);
   const [speed, setSpeed] = useState(0);
   const [heading, setHeading] = useState('--');
@@ -33,6 +35,11 @@ const HornDetector = () => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [noHonkZones, setNoHonkZones] = useState(NO_HONK_ZONES);
   
+  // New state variables for search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  
+  // Existing refs
   const mapContainer = useRef(null);
   const map = useRef(null);
   const marker = useRef(null);
@@ -41,7 +48,36 @@ const HornDetector = () => {
   const prevPosition = useRef(null);
   const pathCoordinates = useRef([]);
 
-  // Load POIs from Mapbox
+  // New search functions
+  const handleLocationSearch = useCallback(async (query) => {
+    try {
+      const result = await temporaryGeocode(query);
+      const coords = getCoordinates(result);
+      console.log('Found location at:', coords);
+      setSearchResults(result);
+      return coords;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      throw error;
+    }
+  }, []);
+
+  const handleSearchClick = async () => {
+    if (!searchQuery.trim()) return;
+    try {
+      const coords = await handleLocationSearch(searchQuery);
+      if (coords && map.current) {
+        map.current.flyTo({
+          center: [coords[0], coords[1]],
+          zoom: 14
+        });
+      }
+    } catch (error) {
+      console.error('Search failed:', error);
+    }
+  };
+
+  // Existing functions (all remain exactly the same)
   const loadPOIs = useCallback(async () => {
     try {
       const [schools, hospitals] = await Promise.all([
@@ -73,7 +109,6 @@ const HornDetector = () => {
     }
   }, []);
 
-  // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = useCallback((lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;
@@ -89,7 +124,6 @@ const HornDetector = () => {
     return R * c;
   }, []);
 
-  // Calculate bearing between two points
   const calculateBearing = useCallback((lat1, lon1, lat2, lon2) => {
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
@@ -102,13 +136,11 @@ const HornDetector = () => {
     return (θ * 180 / Math.PI + 360) % 360;
   }, []);
 
-  // Convert bearing to compass direction
   const bearingToDirection = useCallback((bearing) => {
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     return directions[Math.round(bearing / 45) % 8];
   }, []);
 
-  // Create vehicle marker element
   const createVehicleMarker = useCallback(() => {
     const el = document.createElement('div');
     el.className = 'vehicle-marker';
@@ -124,7 +156,6 @@ const HornDetector = () => {
     return el;
   }, [inRestrictedZone]);
 
-  // Check proximity to restricted zones
   const checkZoneProximity = useCallback((currentPos) => {
     if (!currentPos) return;
 
@@ -152,7 +183,6 @@ const HornDetector = () => {
     setInRestrictedZone(isInZone);
   }, [noHonkZones, calculateDistance]);
 
-  // Update path on map
   const updatePath = useCallback(() => {
     if (!map.current || pathCoordinates.current.length < 2) return;
 
@@ -169,7 +199,6 @@ const HornDetector = () => {
     }
   }, []);
 
-  // Initialize map
   const initMap = useCallback(() => {
     if (map.current || !position) return;
 
@@ -182,9 +211,7 @@ const HornDetector = () => {
 
     map.current.addControl(new mapboxgl.NavigationControl());
 
-    // Add zone markers and circles
     noHonkZones.forEach(zone => {
-      // Add marker
       const el = document.createElement('div');
       el.className = 'zone-marker';
       el.innerHTML = `<span>${zone.name}</span>`;
@@ -192,7 +219,6 @@ const HornDetector = () => {
         .setLngLat([zone.lng, zone.lat])
         .addTo(map.current);
 
-      // Add circle layer for zone radius
       map.current.on('load', () => {
         map.current.addLayer({
           id: `zone-${zone.name}`,
@@ -221,7 +247,6 @@ const HornDetector = () => {
       });
     });
 
-    // Initialize path layer
     map.current.on('load', () => {
       map.current.addSource('route', {
         type: 'geojson',
@@ -250,14 +275,12 @@ const HornDetector = () => {
       });
     });
 
-    // Create vehicle marker
     marker.current = new mapboxgl.Marker({
       element: createVehicleMarker()
     }).setLngLat([position.lng, position.lat])
       .addTo(map.current);
   }, [position, darkMode, createVehicleMarker, noHonkZones]);
 
-  // Handle new position data
   const handlePositionUpdate = useCallback((position) => {
     const { latitude, longitude, speed: gpsSpeed, accuracy } = position.coords;
     const now = new Date();
@@ -299,7 +322,7 @@ const HornDetector = () => {
     checkZoneProximity({ lat: latitude, lng: longitude });
   }, [calculateBearing, bearingToDirection, calculateDistance, checkZoneProximity]);
 
-  // Initialize GPS tracking
+  // Existing useEffect hooks
   useEffect(() => {
     if (!navigator.geolocation) {
       console.error("Geolocation is not supported by your browser");
@@ -330,19 +353,16 @@ const HornDetector = () => {
     };
   }, [handlePositionUpdate]);
 
-  // Load POIs on mount
   useEffect(() => {
     loadPOIs();
   }, [loadPOIs]);
 
-  // Initialize map when position is available
   useEffect(() => {
     if (position) {
       initMap();
     }
   }, [position, initMap]);
 
-  // Update map and marker when position changes
   useEffect(() => {
     if (!position || !map.current || !marker.current) return;
 
@@ -358,7 +378,6 @@ const HornDetector = () => {
     updatePath();
   }, [position, inRestrictedZone, updatePath]);
 
-  // Update map style when dark mode changes
   useEffect(() => {
     if (!map.current) return;
     map.current.setStyle(darkMode ? 'mapbox://styles/mapbox/dark-v10' : 'mapbox://styles/mapbox/light-v10');
@@ -376,7 +395,42 @@ const HornDetector = () => {
         </div>
 
         <div className="main-content">
-          <div className="map-container" ref={mapContainer} />
+          <div className="map-container" ref={mapContainer}>
+            <div className="map-search-container">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search location..."
+                className="map-search-input"
+                onKeyPress={(e) => e.key === 'Enter' && handleSearchClick()}
+              />
+              <button onClick={handleSearchClick} className="map-search-button">
+                Search
+              </button>
+              {searchResults && (
+                <div className="map-search-results">
+                  {searchResults.features.slice(0, 5).map((feature, index) => (
+                    <div
+                      key={index}
+                      className="map-search-result"
+                      onClick={() => {
+                        if (map.current) {
+                          map.current.flyTo({
+                            center: feature.center,
+                            zoom: 14
+                          });
+                        }
+                        setSearchResults(null);
+                      }}
+                    >
+                      {feature.place_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           <div className="status-panel">
             <div className={`status-indicator ${inRestrictedZone ? 'restricted' : 'allowed'}`}>
