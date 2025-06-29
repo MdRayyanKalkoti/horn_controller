@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { getMapboxPOIs } from '../utils/geoUtils';
 
 // Initialize Mapbox
 mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtY2Rhc2d6azBnemkya3NhN3FtN2pud3AifQ.9Pffdl35floWurrolAs55Q';
@@ -11,11 +12,11 @@ const NO_HONK_ZONES = [
   { lat: 18.6200, lng: 73.8150, name: "Downtown Quiet Zone", radius: 100 },
   { lat: 18.6350, lng: 73.8300, name: "Residential Area", radius: 50 },
   { 
-    lat: 18.5604,         // Replace with actual latitude
-    lng: 73.7906,         // Replace with actual longitude
+    lat: 18.5604,
+    lng: 73.7906,
     name: "Shambhu Vihar Society", 
     address: "Baner CHS, Aundh, Pune, Maharashtra 411007",
-    radius: 3000           // Adjust radius (meters) as needed
+    radius: 3000
   }
 ];
 
@@ -30,6 +31,7 @@ const HornDetector = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState(0);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [noHonkZones, setNoHonkZones] = useState(NO_HONK_ZONES);
   
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -39,9 +41,41 @@ const HornDetector = () => {
   const prevPosition = useRef(null);
   const pathCoordinates = useRef([]);
 
+  // Load POIs from Mapbox
+  const loadPOIs = useCallback(async () => {
+    try {
+      const [schools, hospitals] = await Promise.all([
+        getMapboxPOIs(18.5204, 73.8567, 'school'),
+        getMapboxPOIs(18.5204, 73.8567, 'hospital')
+      ]);
+
+      const newZones = [
+        ...NO_HONK_ZONES,
+        ...schools.map(place => ({
+          lat: place.center[1],
+          lng: place.center[0],
+          name: place.text,
+          radius: 100,
+          type: 'school'
+        })),
+        ...hospitals.map(place => ({
+          lat: place.center[1],
+          lng: place.center[0],
+          name: place.text,
+          radius: 200,
+          type: 'hospital'
+        }))
+      ];
+
+      setNoHonkZones(newZones);
+    } catch (error) {
+      console.error("Failed to load POIs:", error);
+    }
+  }, []);
+
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = useCallback((lat1, lon1, lat2, lon2) => {
-    const R = 6371e3; // Earth radius in meters
+    const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
     const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -52,7 +86,7 @@ const HornDetector = () => {
               Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c; // Distance in meters
+    return R * c;
   }, []);
 
   // Calculate bearing between two points
@@ -77,19 +111,18 @@ const HornDetector = () => {
   // Create vehicle marker element
   const createVehicleMarker = useCallback(() => {
     const el = document.createElement('div');
-    el.className = 'vehicle-marker';  
-    el.style.width = '32px';  
-    el.style.height = '32px';  
-    el.style.display = 'flex';  
-    el.style.alignItems = 'center';  
-    el.style.justifyContent = 'center';  
-    el.style.color = 'white';  
-    el.style.color = inRestrictedZone ? '#ff0000' : '#4CAF50'; // Color just the arrow
-    el.style.fontSize = '24px'; // Larger arrow for better visibility
+    el.className = 'vehicle-marker';
+    el.style.width = '32px';
+    el.style.height = '32px';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.color = inRestrictedZone ? '#ff0000' : '#4CAF50';
+    el.style.fontSize = '24px';
     el.style.fontWeight = 'bold';
     el.innerHTML = '➤';
     return el;
-}, [inRestrictedZone]);
+  }, [inRestrictedZone]);
 
   // Check proximity to restricted zones
   const checkZoneProximity = useCallback((currentPos) => {
@@ -98,7 +131,7 @@ const HornDetector = () => {
     let minDistance = Infinity;
     let closestZone = null;
 
-    NO_HONK_ZONES.forEach(zone => {
+    noHonkZones.forEach(zone => {
       const distance = calculateDistance(
         currentPos.lat, currentPos.lng,
         zone.lat, zone.lng
@@ -117,7 +150,7 @@ const HornDetector = () => {
 
     const isInZone = closestZone && minDistance < closestZone.radius;
     setInRestrictedZone(isInZone);
-  }, [calculateDistance]);
+  }, [noHonkZones, calculateDistance]);
 
   // Update path on map
   const updatePath = useCallback(() => {
@@ -150,7 +183,7 @@ const HornDetector = () => {
     map.current.addControl(new mapboxgl.NavigationControl());
 
     // Add zone markers and circles
-    NO_HONK_ZONES.forEach(zone => {
+    noHonkZones.forEach(zone => {
       // Add marker
       const el = document.createElement('div');
       el.className = 'zone-marker';
@@ -180,7 +213,7 @@ const HornDetector = () => {
           paint: {
             'circle-radius': zone.radius,
             'circle-color': '#ff0000',
-            'circle-opacity': 0.2,
+            'circle-opacity': 0.1,
             'circle-stroke-width': 1,
             'circle-stroke-color': '#ff0000'
           }
@@ -222,7 +255,7 @@ const HornDetector = () => {
       element: createVehicleMarker()
     }).setLngLat([position.lng, position.lat])
       .addTo(map.current);
-  }, [position, darkMode, createVehicleMarker]);
+  }, [position, darkMode, createVehicleMarker, noHonkZones]);
 
   // Handle new position data
   const handlePositionUpdate = useCallback((position) => {
@@ -233,11 +266,9 @@ const HornDetector = () => {
     setGpsAccuracy(accuracy);
     setLastUpdate(now.toLocaleTimeString());
     
-    // Calculate speed (convert m/s to km/h if available)
     const calculatedSpeed = gpsSpeed ? (gpsSpeed * 3.6) : 0;
     setSpeed(Math.round(calculatedSpeed));
 
-    // Calculate heading if we have previous position
     if (prevPosition.current) {
       const bearing = calculateBearing(
         prevPosition.current.lat, prevPosition.current.lng,
@@ -246,24 +277,21 @@ const HornDetector = () => {
       setHeading(bearingToDirection(bearing));
     }
 
-    // Calculate distance traveled
     if (prevPosition.current) {
       const distance = calculateDistance(
         prevPosition.current.lat, prevPosition.current.lng,
         latitude, longitude
       );
-      setDistanceTraveled(prev => prev + (distance / 1000)); // Convert to km
+      setDistanceTraveled(prev => prev + (distance / 1000));
     }
 
-    // Update path coordinates
     pathCoordinates.current.push([longitude, latitude]);
     if (pathCoordinates.current.length > 100) {
       pathCoordinates.current.shift();
     }
 
-    // Update trip duration
     if (startTime.current) {
-      const duration = Math.floor((now - startTime.current) / 1000 / 60); // in minutes
+      const duration = Math.floor((now - startTime.current) / 1000 / 60);
       setTripDuration(duration);
     }
 
@@ -301,6 +329,11 @@ const HornDetector = () => {
       }
     };
   }, [handlePositionUpdate]);
+
+  // Load POIs on mount
+  useEffect(() => {
+    loadPOIs();
+  }, [loadPOIs]);
 
   // Initialize map when position is available
   useEffect(() => {

@@ -1,3 +1,11 @@
+export async function getMapboxPOIs(lat, lng, category) {
+  const response = await fetch(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${category}.json?proximity=${lng},${lat}&access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN}`
+  );
+  const data = await response.json();
+  return data.features; // Returns [{ center: [lng,lat], text: "Name" }, ...]
+}
+
 // Calculate distance between two points
 export const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Earth radius in km
