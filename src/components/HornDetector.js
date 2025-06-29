@@ -4,7 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { getMapboxPOIs } from '../utils/geoUtils';
 
 // Initialize Mapbox
-mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtY2Rhc2d6azBnemkya3NhN3FtN2pud3AifQ.9Pffdl35floWurrolAs55Q';
+mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtNmtvZWN0aTAwOXcyaW9xenp4d3pqYmEifQ.5tnD481rFb6OmHTpi2ujCA';
 
 const NO_HONK_ZONES = [
   { lat: 18.6300, lng: 73.8200, name: "Central School Zone", radius: 1000 },
