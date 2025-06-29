@@ -70,19 +70,19 @@ const HornDetector = () => {
   // Create vehicle marker element
   const createVehicleMarker = useCallback(() => {
     const el = document.createElement('div');
-    el.className = 'vehicle-marker';
-    el.style.backgroundColor = inRestrictedZone ? '#ff0000' : '#4CAF50';
-    el.style.width = '32px';
-    el.style.height = '32px';
-    el.style.borderRadius = '50%';
-    el.style.display = 'flex';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    el.style.color = 'white';
-    el.style.fontSize = '16px';
-    el.innerHTML = '🚗';
+    el.className = 'vehicle-marker';  
+    el.style.width = '32px';  
+    el.style.height = '32px';  
+    el.style.display = 'flex';  
+    el.style.alignItems = 'center';  
+    el.style.justifyContent = 'center';  
+    el.style.color = 'white';  
+    el.style.color = inRestrictedZone ? '#ff0000' : '#4CAF50'; // Color just the arrow
+    el.style.fontSize = '24px'; // Larger arrow for better visibility
+    el.style.fontWeight = 'bold';
+    el.innerHTML = '➤';
     return el;
-  }, [inRestrictedZone]);
+}, [inRestrictedZone]);
 
   // Check proximity to restricted zones
   const checkZoneProximity = useCallback((currentPos) => {
