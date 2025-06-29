@@ -9,7 +9,14 @@ const NO_HONK_ZONES = [
   { lat: 18.6300, lng: 73.8200, name: "Central School Zone", radius: 100 },
   { lat: 18.6250, lng: 73.8250, name: "City Hospital Area", radius: 200},
   { lat: 18.6200, lng: 73.8150, name: "Downtown Quiet Zone", radius: 100 },
-  { lat: 18.6350, lng: 73.8300, name: "Residential Area", radius: 50 }
+  { lat: 18.6350, lng: 73.8300, name: "Residential Area", radius: 50 },
+  { 
+    lat: 18.5604,         // Replace with actual latitude
+    lng: 73.7906,         // Replace with actual longitude
+    name: "Shambhu Vihar Society", 
+    address: "Baner CHS, Aundh, Pune, Maharashtra 411007",
+    radius: 150            // Adjust radius (meters) as needed
+  }
 ];
 
 const HornDetector = () => {
