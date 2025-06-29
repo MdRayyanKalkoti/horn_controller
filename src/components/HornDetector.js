@@ -9,7 +9,7 @@ mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtY2Rhc2d6azBnemkya
 
 const NO_HONK_ZONES = [
   { lat: 18.6300, lng: 73.8200, name: "Central School Zone", radius: 1000 },
-  { lat: 18.6250, lng: 73.8250, name: "City Hospital Area", radius: 200},
+  { lat: 18.6250, lng: 73.8250, name: "City Hospital Area", radius: 200 },
   { lat: 18.6200, lng: 73.8150, name: "Downtown Quiet Zone", radius: 100 },
   { lat: 18.6350, lng: 73.8300, name: "Residential Area", radius: 50 },
   { 
@@ -22,7 +22,7 @@ const NO_HONK_ZONES = [
 ];
 
 const HornDetector = () => {
-  // Existing state variables
+  // State management
   const [position, setPosition] = useState(null);
   const [speed, setSpeed] = useState(0);
   const [heading, setHeading] = useState('--');
@@ -34,12 +34,10 @@ const HornDetector = () => {
   const [gpsAccuracy, setGpsAccuracy] = useState(0);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [noHonkZones, setNoHonkZones] = useState(NO_HONK_ZONES);
-  
-  // New state variables for search functionality
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   
-  // Existing refs
+  // Refs
   const mapContainer = useRef(null);
   const map = useRef(null);
   const marker = useRef(null);
@@ -48,12 +46,11 @@ const HornDetector = () => {
   const prevPosition = useRef(null);
   const pathCoordinates = useRef([]);
 
-  // New search functions
+  // Geocoding functions
   const handleLocationSearch = useCallback(async (query) => {
     try {
       const result = await temporaryGeocode(query);
       const coords = getCoordinates(result);
-      console.log('Found location at:', coords);
       setSearchResults(result);
       return coords;
     } catch (error) {
@@ -77,7 +74,7 @@ const HornDetector = () => {
     }
   };
 
-  // Existing functions (all remain exactly the same)
+  // Core functionality
   const loadPOIs = useCallback(async () => {
     try {
       const [schools, hospitals] = await Promise.all([
@@ -199,6 +196,7 @@ const HornDetector = () => {
     }
   }, []);
 
+  // Map initialization
   const initMap = useCallback(() => {
     if (map.current || !position) return;
 
@@ -281,6 +279,7 @@ const HornDetector = () => {
       .addTo(map.current);
   }, [position, darkMode, createVehicleMarker, noHonkZones]);
 
+  // Position tracking
   const handlePositionUpdate = useCallback((position) => {
     const { latitude, longitude, speed: gpsSpeed, accuracy } = position.coords;
     const now = new Date();
@@ -288,9 +287,7 @@ const HornDetector = () => {
     setPosition({ lat: latitude, lng: longitude });
     setGpsAccuracy(accuracy);
     setLastUpdate(now.toLocaleTimeString());
-    
-    const calculatedSpeed = gpsSpeed ? (gpsSpeed * 3.6) : 0;
-    setSpeed(Math.round(calculatedSpeed));
+    setSpeed(Math.round((gpsSpeed || 0) * 3.6));
 
     if (prevPosition.current) {
       const bearing = calculateBearing(
@@ -298,9 +295,7 @@ const HornDetector = () => {
         latitude, longitude
       );
       setHeading(bearingToDirection(bearing));
-    }
 
-    if (prevPosition.current) {
       const distance = calculateDistance(
         prevPosition.current.lat, prevPosition.current.lng,
         latitude, longitude
@@ -314,54 +309,34 @@ const HornDetector = () => {
     }
 
     if (startTime.current) {
-      const duration = Math.floor((now - startTime.current) / 1000 / 60);
-      setTripDuration(duration);
+      setTripDuration(Math.floor((now - startTime.current) / 1000 / 60));
     }
 
     prevPosition.current = { lat: latitude, lng: longitude };
     checkZoneProximity({ lat: latitude, lng: longitude });
   }, [calculateBearing, bearingToDirection, calculateDistance, checkZoneProximity]);
 
-  // Existing useEffect hooks
+  // Effects
   useEffect(() => {
-    if (!navigator.geolocation) {
-      console.error("Geolocation is not supported by your browser");
-      return;
-    }
-
+    if (!navigator.geolocation) return;
+    
     startTime.current = new Date();
     pathCoordinates.current = [];
 
     watchId.current = navigator.geolocation.watchPosition(
-      (position) => {
-        handlePositionUpdate(position);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 5000
-      }
+      handlePositionUpdate,
+      (error) => console.error("GPS error:", error),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
     );
 
-    return () => {
-      if (watchId.current) {
-        navigator.geolocation.clearWatch(watchId.current);
-      }
-    };
+    return () => navigator.geolocation.clearWatch(watchId.current);
   }, [handlePositionUpdate]);
 
-  useEffect(() => {
-    loadPOIs();
-  }, [loadPOIs]);
-
-  useEffect(() => {
-    if (position) {
-      initMap();
-    }
-  }, [position, initMap]);
+  useEffect(() => { loadPOIs(); }, [loadPOIs]);
+  useEffect(() => { if (position) initMap(); }, [position, initMap]);
+  useEffect(() => { if (!map.current) return;
+    map.current.setStyle(darkMode ? 'mapbox://styles/mapbox/dark-v10' : 'mapbox://styles/mapbox/light-v10');
+  }, [darkMode]);
 
   useEffect(() => {
     if (!position || !map.current || !marker.current) return;
@@ -378,11 +353,7 @@ const HornDetector = () => {
     updatePath();
   }, [position, inRestrictedZone, updatePath]);
 
-  useEffect(() => {
-    if (!map.current) return;
-    map.current.setStyle(darkMode ? 'mapbox://styles/mapbox/dark-v10' : 'mapbox://styles/mapbox/light-v10');
-  }, [darkMode]);
-
+  // UI Rendering
   return (
     <div className={`app ${darkMode ? 'dark' : 'light'}`}>
       <div className="dashboard">
