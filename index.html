@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Real-time Vehicle Horn Detector (Mapbox)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #1a2a6c;
+            --secondary: #b21f1f;
+            --safe: #4CAF50;
+            --warning: #FFC107;
+            --danger: #f44336;
+            --card-bg: rgba(255, 255, 255, 0.08);
+            --text-light: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--primary));
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            position: relative;
+            animation: fadeIn 1s ease;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        header p {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-card {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 30px 0;
+        }
+
+        .status-icon {
+            font-size: 6rem;
+            margin-bottom: 25px;
+            transition: all 0.5s ease;
+        }
+
+        .status-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .status-message {
+            font-size: 1.3rem;
+            color: var(--text-light);
+            max-width: 400px;
+            margin: 0 auto 20px;
+        }
+
+        .enabled {
+            color: var(--safe);
+        }
+
+        .disabled {
+            color: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .map-container {
+            height: 450px;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        .coordinates {
+            font-size: 1.1rem;
+            font-family: monospace;
+            margin: 5px 0;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .zones-card h2, .info-card h2 {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zone-list {
+            list-style: none;
+        }
+
+        .zone-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.3s ease;
+        }
+
+        .zone-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .zone-name {
+            font-weight: bold;
+            color: #ff9800;
+        }
+
+        .zone-distance {
+            font-family: monospace;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 5px;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .info-item:hover {
+            transform: scale(1.03);
+        }
+
+        .info-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .info-label {
+            color: #b0bec5;
+            font-size: 0.9rem;
+        }
+
+        .distance-indicator {
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .distance-progress {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #b0bec5;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .no-honk-badge {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ff8a80;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .honk-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #a5d6a7;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .api-key-container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 800px;
+            /* Hidden as per user request to embed key directly in JS */
+            display: none;
+        }
+
+        /* The following API form styles are now largely unused due to display: none on parent */
+        .api-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .api-form input {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .api-form button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .api-form button:hover {
+            background: #45a049;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-left: 4px solid var(--danger);
+            transform: translateX(120%);
+            transition: transform 0.5s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.safe {
+            border-left: 4px solid var(--safe);
+        }
+
+        .test-controls {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .test-button {
+            padding: 12px 25px;
+            border-radius: 8px;
+            border: none;
+            background: #3f51b5;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .test-button:hover {
+            background: #303f9f;
+            transform: translateY(-2px);
+        }
+
+        .test-button.warning {
+            background: #ff9800;
+        }
+
+        .test-button.warning:hover {
+            background: #f57c00;
+        }
+
+        .test-button.danger {
+            background: #f44336;
+        }
+
+        .test-button.danger:hover {
+            background: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification">
+        <i class="fas fa-volume-mute"></i> Entering restricted zone! Honking disabled
+    </div>
+
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-car"></i> Real-time Vehicle Horn Detector</h1>
+            <p>Live geolocation tracking that automatically disables honking in restricted zones</p>
+
+            <div class="api-key-container">
+                <p><i class="fas fa-key"></i> Mapbox Access Token is integrated directly in the script.</p>
+            </div>
+
+            <div class="test-controls">
+                <h3><i class="fas fa-flask"></i> Testing Controls</h3>
+                <p>Manually trigger horn states for testing purposes</p>
+                <div class="test-buttons">
+                    <button class="test-button" id="enableHornBtn">
+                        <i class="fas fa-volume-up"></i> Force Enable Horn
+                    </button>
+                    <button class="test-button danger" id="disableHornBtn">
+                        <i class="fas fa-volume-mute"></i> Force Disable Horn
+                    </button>
+                    <button class="test-button warning" id="moveToZoneBtn">
+                        <i class="fas fa-map-marker-alt"></i> Move to Restricted Zone
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <div class="card status-card">
+                <div class="status-indicator">
+                    <div class="status-icon enabled">
+                        <i class="fas fa-volume-up"></i>
+                    </div>
+                    <div class="status-text enabled">HONKING ENABLED</div>
+                    <div class="status-message">You are outside restricted zones. Honking is permitted.</div>
+                    <div class="honk-badge" id="mainHonkBadge">
+                        <i class="fas fa-check-circle"></i> Safe to honk
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="map-container">
+                    <div id="map"></div>
+                    <div class="map-overlay">
+                        <div class="coordinates">Latitude: <span id="latValue">12.9716</span></div>
+                        <div class="coordinates">Longitude: <span id="lngValue">77.5946</span></div>
+                        <div class="coordinates">Speed: <span id="speedValue">0</span> km/h</div>
+                        <div class="coordinates">Heading: <span id="headingValue">--</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="card zones-card">
+                <h2><i class="fas fa-map-marker-alt"></i> Restricted Zones</h2>
+                <ul class="zone-list">
+                    <li class="zone-item">
+                        <div>
+                            <div class="zone-name">Central School Zone</div>
+                            <div>500m radius</div>
+                        </div>
+                        <div class="zone-distance" id="zone1">0m</div>
+                    </li>
+                    <li class="zone-item">
+                        <div>
+                            <div class="zone-name">City Hospital Area</div>
+                            <div>300m radius</div>
+                        </div>
+                        <div class="zone-distance" id="zone2">0m</div>
+                    </li>
+                    <li class="zone-item">
+                        <div>
+                            <div class="zone-name">Downtown Quiet Zone</div>
+                            <div>400m radius</div>
+                        </div>
+                        <div class="zone-distance" id="zone3">0m</div>
+                    </li>
+                    <li class="zone-item">
+                        <div>
+                            <div class="zone-name">Residential Area</div>
+                            <div>250m radius</div>
+                        </div>
+                        <div class="zone-distance" id="zone4">0m</div>
+                    </li>
+                    <li class="zone-item">
+                        <div>
+                            <div class="zone-name">University Campus</div>
+                            <div>450m radius</div>
+                        </div>
+                        <div class="zone-distance" id="zone5">0m</div>
+                    </li>
+                    <li class="zone-item">
+                        <div>
+                            <div class="zone-name">Government Complex</div>
+                            <div>350m radius</div>
+                        </div>
+                        <div class="zone-distance" id="zone6">0m</div>
+                    </li>
+                    <li class="zone-item">
+                        <div>
+                            <div class="zone-name">City Park</div>
+                            <div>400m radius</div>
+                        </div>
+                        <div class="zone-distance" id="zone7">0m</div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card info-card">
+                <h2><i class="fas fa-info-circle"></i> Vehicle Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <div class="info-value" id="speedDisplay">0 km/h</div>
+                        <div class="info-label">CURRENT SPEED</div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-road"></i>
+                        <div class="info-value" id="distanceDisplay">0.0 km</div>
+                        <div class="info-label">DISTANCE TRAVELED</div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-clock"></i>
+                        <div class="info-value" id="timeDisplay">0 min</div>
+                        <div class="info-label">TRIP DURATION</div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-map-pin"></i>
+                        <div class="info-value" id="destDisplay">-- km</div>
+                        <div class="info-label">TO DESTINATION</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 25px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-location-arrow"></i> Distance to Nearest Zone
+                </h3>
+                <div class="distance-indicator">
+                    <div class="distance-progress" id="distanceProgress" style="width: 100%; background: var(--safe);"></div>
+                </div>
+                <div class="legend">
+                    <div>Safe (500m)</div>
+                    <div>Approaching (100m)</div>
+                    <div>Restricted Zone</div>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div class="honk-badge" id="bottomHonkStatusBadge">
+                        <i class="fas fa-volume-up"></i> Honking Enabled
+                    </div>
+                    <div class="no-honk-badge" id="bottomNoHonkStatusBadge">
+                        <i class="fas fa-volume-mute"></i> Honking Disabled
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Real-time Horn Detection System | Uses live geolocation to enforce no-honk zones</p>
+            <p>Automatically disables honking within 100m of restricted areas</p>
+        </footer>
+    </div>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <script>
+        // --- START: Mapbox Access Token ---
+        // IMPORTANT: Hardcoding API keys/tokens in frontend JS is NOT secure for production.
+        // For actual deployment, use a backend proxy or environment variables.
+        mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN_HERE'; // <--- REPLACE THIS WITH YOUR ACTUAL MAPBOX PUBLIC ACCESS TOKEN
+        // --- END: Mapbox Access Token ---
+
+        let currentLat = 12.9716; // Default starting location (Pune)
+        let currentLng = 77.5946; // Default starting location (Pune)
+        let map, marker;
+        let tripDistance = 0.0;
+        let tripTime = 0;
+        let notificationTimeout;
+        let hornEnabled = true;
+        let manualOverrideHorn = null; // null: auto, true: force enabled, false: force disabled
+
+        let zones = [
+            {
+                name: "Central School Zone",
+                center: { lat: 12.968, lng: 77.600 },
+                radius: 500, // meters
+                color: "#f44336"
+            },
+            {
+                name: "City Hospital Area",
+                center: { lat: 12.980, lng: 77.610 },
+                radius: 300,
+                color: "#f44336"
+            },
+            {
+                name: "Downtown Quiet Zone",
+                center: { lat: 12.960, lng: 77.580 },
+                radius: 400,
+                color: "#f44336"
+            },
+            {
+                name: "Residential Area",
+                center: { lat: 12.950, lng: 77.620 },
+                radius: 250,
+                color: "#f44336"
+            },
+            {
+                name: "University Campus",
+                center: { lat: 12.975, lng: 77.610 },
+                radius: 450,
+                color: "#f44336"
+            },
+            {
+                name: "Government Complex",
+                center: { lat: 12.985, lng: 77.595 },
+                radius: 350,
+                color: "#f44336"
+            },
+            {
+                name: "City Park",
+                center: { lat: 12.955, lng: 77.575 },
+                radius: 400,
+                color: "#f44336"
+            }
+        ];
+
+        // Custom marker element
+        const el = document.createElement('div');
+        el.className = 'marker';
+        el.style.width = '20px';
+        el.style.height = '20px';
+        el.style.borderRadius = '50%';
+        el.style.border = '2px solid white';
+        el.style.transition = 'background-color 0.5s ease';
+
+
+        // Initialize the map
+        function initMap() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        currentLat = position.coords.latitude;
+                        currentLng = position.coords.longitude;
+                        setupMapbox();
+                    },
+                    () => {
+                        console.warn("Geolocation denied or unavailable. Using default location.");
+                        setupMapbox();
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                console.warn("Browser does not support Geolocation. Using default location.");
+                setupMapbox();
+            }
+        }
+
+        function setupMapbox() {
+            map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v12', // You can change the map style
+                center: [currentLng, currentLat], // Mapbox uses [longitude, latitude]
+                zoom: 14
+            });
+
+            map.on('load', () => {
+                // Add marker
+                marker = new mapboxgl.Marker({
+                    element: el, // Use our custom styled div
+                    anchor: 'center'
+                })
+                .setLngLat([currentLng, currentLat])
+                .addTo(map);
+
+                // Add restricted zones as GeoJSON circles
+                zones.forEach((zone, index) => {
+                    const circle = turf.circle([zone.center.lng, zone.center.lat], zone.radius / 1000, { units: 'kilometers' }); // radius in km for turf
+                    map.addSource(`zone-${index}`, {
+                        'type': 'geojson',
+                        'data': circle
+                    });
+                    map.addLayer({
+                        'id': `zone-fill-${index}`,
+                        'type': 'fill',
+                        'source': `zone-${index}`,
+                        'layout': {},
+                        'paint': {
+                            'fill-color': zone.color,
+                            'fill-opacity': 0.2
+                        }
+                    });
+                    map.addLayer({
+                        'id': `zone-outline-${index}`,
+                        'type': 'line',
+                        'source': `zone-${index}`,
+                        'layout': {},
+                        'paint': {
+                            'line-color': zone.color,
+                            'line-width': 2
+                        }
+                    });
+                });
+
+                // Initial update
+                updatePosition(true); // Pass true to force initial update values
+            });
+        }
+
+        // Function to calculate distance between two lat/lng points using turf.js
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const from = turf.point([lon1, lat1]);
+            const to = turf.point([lon2, lat2]);
+            const options = { units: 'meters' };
+            return turf.distance(from, to, options);
+        }
+
+        // Function to calculate distances to all zones
+        function calculateZoneDistances() {
+            return zones.map(zone => {
+                return Math.round(calculateDistance(currentLat, currentLng, zone.center.lat, zone.center.lng));
+            });
+        }
+
+        // Function to update the vehicle position and status
+        function updatePosition(initialLoad = false) {
+            let speed = 0;
+            let heading = '--';
+
+            if (!initialLoad) {
+                // Simulate movement if not initial load
+                const latChange = (Math.random() - 0.5) * 0.0005;
+                const lngChange = (Math.random() - 0.5) * 0.0005;
+
+                currentLat += latChange;
+                currentLng += lngChange;
+
+                speed = Math.floor(20 + Math.random() * 60); // 20-80 km/h
+                const headings = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                heading = headings[Math.floor(Math.random() * headings.length)];
+
+                // Update marker position and map center
+                if (marker && map) {
+                    marker.setLngLat([currentLng, currentLat]);
+                    map.setCenter([currentLng, currentLat]); // Keep map centered on vehicle
+                }
+
+                // Update trip distance and time
+                tripDistance += (speed / 3600); // Distance = Speed * Time (km/h * 1s/3600s)
+                tripTime += (1/60); // Time in minutes (1 second / 60 seconds per minute)
+
+            } else {
+                // Initial load: ensure trip data is 0
+                tripDistance = 0.0;
+                tripTime = 0;
+                speed = 0;
+                heading = '--'; // Initial heading is undefined
+            }
+
+            // Update coordinates display
+            document.getElementById('latValue').textContent = currentLat.toFixed(4);
+            document.getElementById('lngValue').textContent = currentLng.toFixed(4);
+
+            // Update speed and heading display
+            document.getElementById('speedValue').textContent = speed;
+            document.getElementById('headingValue').textContent = heading;
+            document.getElementById('speedDisplay').textContent = `${speed} km/h`;
+            // No infoWindow in Mapbox simple marker setup, so this line is removed or handled differently
+            // document.getElementById('infoWindowSpeed').textContent = speed;
+
+
+            // Update trip info
+            document.getElementById('distanceDisplay').textContent = tripDistance.toFixed(1) + " km";
+            document.getElementById('timeDisplay').textContent = `${Math.floor(tripTime)} min`; // Display whole minutes
+            document.getElementById('destDisplay').textContent = '4.7 km'; // Placeholder, not dynamic here
+
+            // Calculate distance to zones
+            const distances = calculateZoneDistances();
+
+            // Update distances display for each zone
+            zones.forEach((zone, index) => {
+                const zoneElement = document.getElementById(`zone${index + 1}`);
+                if (zoneElement) {
+                    zoneElement.textContent = distances[index] < 1000 ? `${distances[index]}m` : `${(distances[index] / 1000).toFixed(1)}km`;
+                }
+            });
+
+            // Get the minimum distance to any restricted zone
+            const minDistance = distances.length > 0 ? Math.min(...distances) : Infinity;
+
+            // Determine if we're in a restricted zone (within 100m radius of any zone's center)
+            const isNowInZone = minDistance <= 100;
+
+            let newHornState;
+            if (manualOverrideHorn !== null) {
+                // If manual override is active, use that state
+                newHornState = manualOverrideHorn;
+            } else {
+                // Otherwise, determine state based on zone proximity
+                newHornState = !isNowInZone; // If in zone, disable (false); if not, enable (true)
+            }
+
+            // Only update if the horn state actually changes or it's the initial load
+            if (newHornState !== hornEnabled || initialLoad) {
+                updateHornStatus(newHornState);
+                if (!initialLoad) { // Only show notification for changes, not initial state
+                    if (newHornState) {
+                        showNotification("Leaving restricted zone! Honking enabled", 'safe');
+                    } else {
+                        showNotification("Entering restricted zone! Honking disabled", 'danger');
+                    }
+                }
+            }
+
+            // Update distance progress bar
+            updateDistanceProgressBar(minDistance);
+        }
+
+        function updateHornStatus(enable) {
+            hornEnabled = enable;
+            const statusIcon = document.querySelector('.status-indicator .status-icon');
+            const statusText = document.querySelector('.status-indicator .status-text');
+            const statusMessage = document.querySelector('.status-message');
+            const mainHonkBadge = document.getElementById('mainHonkBadge');
+            const bottomHonkStatusBadge = document.getElementById('bottomHonkStatusBadge');
+            const bottomNoHonkStatusBadge = document.getElementById('bottomNoHonkStatusBadge');
+            // const infoWindowStatus = document.getElementById('infoWindowStatus'); // No infoWindow in Mapbox simple marker setup
+
+            if (hornEnabled) {
+                statusIcon.classList.remove('disabled');
+                statusIcon.classList.add('enabled');
+                statusText.classList.remove('disabled');
+                statusText.classList.add('enabled');
+                statusText.textContent = "HONKING ENABLED";
+                statusMessage.textContent = "You are outside restricted zones. Honking is permitted.";
+                mainHonkBadge.style.display = 'inline-flex';
+                bottomHonkStatusBadge.style.display = 'inline-flex';
+                bottomNoHonkStatusBadge.style.display = 'none';
+                // if (infoWindowStatus) infoWindowStatus.textContent = "Free to Honk"; // If you add a custom infowindow
+                if (el) { // Update custom marker element's background color
+                    el.style.backgroundColor = '#4CAF50'; // Green
+                }
+            } else {
+                statusIcon.classList.remove('enabled');
+                statusIcon.classList.add('disabled');
+                statusText.classList.remove('enabled');
+                statusText.classList.add('disabled');
+                statusText.textContent = "HONKING DISABLED";
+                statusMessage.textContent = "You are currently in a restricted zone. Honking is disabled.";
+                mainHonkBadge.style.display = 'none';
+                bottomHonkStatusBadge.style.display = 'none';
+                bottomNoHonkStatusBadge.style.display = 'inline-flex';
+                // if (infoWindowStatus) infoWindowStatus.textContent = "Restricted Zone"; // If you add a custom infowindow
+                if (el) { // Update custom marker element's background color
+                    el.style.backgroundColor = '#f44336'; // Red
+                }
+            }
+        }
+
+        function showNotification(message, type = 'danger') {
+            const notification = document.getElementById('notification');
+            notification.innerHTML = `<i class="fas fa-${type === 'safe' ? 'check-circle' : 'volume-mute'}"></i> ${message}`;
+            notification.className = 'notification show'; // Reset classes and add 'show'
+            if (type === 'safe') {
+                notification.classList.add('safe');
+            } else {
+                notification.classList.remove('safe');
+            }
+            clearTimeout(notificationTimeout);
+            notificationTimeout = setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000); // Notification disappears after 3 seconds
+        }
+
+        function updateDistanceProgressBar(distance) {
+            const progressBar = document.getElementById('distanceProgress');
+            const maxDisplayDistance = 1000; // Max distance for the progress bar (e.g., 1km)
+            let percentage = (1 - Math.min(distance, maxDisplayDistance) / maxDisplayDistance) * 100;
+
+            if (distance <= 100) { // Danger zone (within or very close to restricted zone)
+                progressBar.style.background = 'var(--danger)';
+            } else if (distance <= 500) { // Warning zone (approaching)
+                progressBar.style.background = 'var(--warning)';
+            } else { // Safe zone
+                progressBar.style.background = 'var(--safe)';
+            }
+            // Ensure percentage is between 0 and 100
+            progressBar.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+        }
+
+
+        // --- Event Listeners for Test Controls ---
+        document.getElementById('enableHornBtn').addEventListener('click', () => {
+            manualOverrideHorn = true; // Set manual override
+            updateHornStatus(true);
+            showNotification("Horn forced enabled!", 'safe');
+        });
+
+        document.getElementById('disableHornBtn').addEventListener('click', () => {
+            manualOverrideHorn = false; // Set manual override
+            updateHornStatus(false);
+            showNotification("Horn forced disabled!");
+        });
+
+        document.getElementById('moveToZoneBtn').addEventListener('click', () => {
+            manualOverrideHorn = null; // Clear manual override when moving to a zone
+            // Move to a random restricted zone for testing
+            const randomZone = zones[Math.floor(Math.random() * zones.length)];
+            // Position slightly inside the zone's 100m radius
+            currentLat = randomZone.center.lat + (Math.random() - 0.5) * 0.00005;
+            currentLng = randomZone.center.lng + (Math.random() - 0.5) * 0.00005;
+
+            // Mapbox setCenter expects [lng, lat]
+            if (map && marker) {
+                map.setCenter([currentLng, currentLat]);
+                marker.setLngLat([currentLng, currentLat]);
+            }
+            // Manually trigger status update after moving
+            updatePosition(); // Re-evaluate zone status
+            showNotification(`Moved near ${randomZone.name}. Checking horn status...`, 'safe');
+        });
+
+
+        // --- Initial Setup and Simulation Intervals ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if Mapbox access token is set before loading maps
+            if (mapboxgl.accessToken === 'YOUR_MAPBOX_ACCESS_TOKEN_HERE' || !mapboxgl.accessToken) {
+                console.error("Please replace 'YOUR_MAPBOX_ACCESS_TOKEN_HERE' with your actual Mapbox Public Access Token in the JavaScript code.");
+                document.getElementById('map').innerHTML = "<p style='color: white; padding: 20px;'>Error: Mapbox Access Token is missing. Please edit the script to add your token.</p>";
+            } else {
+                initMap(); // This will setup mapbox and then call updatePosition(true)
+            }
+
+            // Initial updates for display values to show '0' or default placeholders
+            document.getElementById('speedDisplay').textContent = '0 km/h';
+            document.getElementById('distanceDisplay').textContent = '0.0 km';
+            document.getElementById('timeDisplay').textContent = '0 min';
+            document.getElementById('destDisplay').textContent = '-- km';
+            document.getElementById('headingValue').textContent = '--';
+            document.getElementById('latValue').textContent = currentLat.toFixed(4);
+            document.getElementById('lngValue').textContent = currentLng.toFixed(4);
+
+            // Initial horn status for display
+            updateHornStatus(true);
+
+            // Start continuous updates after a small delay to ensure map is loaded
+            if (mapboxgl.accessToken !== 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtY2Rhc2d6azBnemkya3NhN3FtN2pud3AifQ.9Pffdl35floWurrolAs55Q' && mapboxgl.accessToken) {
+                // We start the interval after map load is handled by initMap/setupMapbox.
+                // For direct usage outside map.on('load'), a small timeout helps.
+                // The `updatePosition` function itself contains checks for `map` and `marker`.
+                setTimeout(() => {
+                    setInterval(updatePosition, 1000); // Update position and status every 1 second
+                }, 500); // Give map a moment to initialize
+            }
+        });
+
+    </script>
+</body>
+</html>
