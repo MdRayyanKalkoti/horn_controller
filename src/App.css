@@ -33,87 +33,92 @@
 .dashboard {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 15px;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
 }
 
 .header h1 {
   color: var(--primary-light);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  font-size: 1.5rem;
 }
 
 .header p {
   color: var(--text-light);
-  font-size: 1.1rem;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
 }
 
 .app.dark .header p {
   color: var(--text-dark);
 }
 
-/* Map Container */
+/* Map Container - Now Larger */
 .map-container {
   width: 100%;
-  height: 400px;
-  border-radius: 10px;
+  height: 65vh;
+  min-height: 450px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 /* Main Content Layout */
 .main-content {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 15px;
 }
 
-/* Status Panel */
+/* Status Panel - More Compact */
 .status-panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
 }
 
 .status-indicator {
-  padding: 20px;
-  border-radius: 10px;
+  padding: 12px;
+  border-radius: 8px;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .status-indicator.allowed {
   background-color: rgba(76, 175, 80, 0.1);
-  border: 2px solid var(--primary-light);
+  border: 1px solid var(--primary-light);
 }
 
 .status-indicator.restricted {
   background-color: rgba(244, 67, 54, 0.1);
-  border: 2px solid var(--danger-light);
+  border: 1px solid var(--danger-light);
   animation: pulse 2s infinite;
 }
 
-.status-icon {
-  font-size: 1.2rem;
-  margin-top: 10px;
-  font-weight: bold;
+.status-indicator h2 {
+  font-size: 1.1rem;
+  margin: 5px 0;
+}
+
+.status-indicator p {
+  font-size: 0.85rem;
+  margin: 5px 0;
 }
 
 @keyframes pulse {
   0% { transform: scale(1); }
-  50% { transform: scale(1.03); }
+  50% { transform: scale(1.02); }
   100% { transform: scale(1); }
 }
 
 .position-info, .zone-info {
   background-color: var(--card-light);
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
 }
 
 .app.dark .position-info,
@@ -123,9 +128,11 @@
 
 .position-info h3, .zone-info h3 {
   margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
   color: var(--primary-light);
   border-bottom: 1px solid var(--border-light);
-  padding-bottom: 10px;
+  padding-bottom: 8px;
 }
 
 .app.dark .position-info h3,
@@ -133,48 +140,23 @@
   border-bottom-color: var(--border-dark);
 }
 
-.zone-info ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.position-info p {
+  margin: 6px 0;
 }
 
-.zone-info li {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-between;
-}
-
-.app.dark .zone-info li {
-  border-bottom-color: var(--border-dark);
-}
-
-.zone-name {
-  font-weight: bold;
-}
-
-.zone-radius {
-  color: #666;
-}
-
-.app.dark .zone-radius {
-  color: #aaa;
-}
-
-/* Stats Panel */
+/* Stats Panel - More Compact */
 .stats-panel {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .stat-card {
   background-color: var(--card-light);
-  padding: 15px;
-  border-radius: 10px;
+  padding: 10px;
+  border-radius: 8px;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .app.dark .stat-card {
@@ -182,14 +164,15 @@
 }
 
 .stat-card h4 {
-  margin-top: 0;
+  margin: 5px 0;
+  font-size: 0.85rem;
   color: var(--primary-light);
 }
 
 .stat-value {
-  font-size: 2rem;
+  font-size: 1.3rem;
   font-weight: bold;
-  margin: 10px 0;
+  margin: 5px 0;
 }
 
 .stat-value.safe {
@@ -201,7 +184,7 @@
 }
 
 .stat-label {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: #666;
 }
 
@@ -209,12 +192,13 @@
   color: #aaa;
 }
 
-/* Footer */
+/* Footer - Smaller */
 .footer {
-  margin-top: 30px;
+  margin-top: 15px;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: #666;
+  padding: 8px 0;
 }
 
 .app.dark .footer {
@@ -223,50 +207,70 @@
 
 /* Markers */
 .vehicle-marker {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 2px solid white;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 16px;
+  font-size: 14px;
   transition: background-color 0.3s;
 }
 
 .zone-marker {
   background-color: rgba(255, 0, 0, 0.4);
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   justify-content: center;
   align-items: center;
   color: white;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .zone-marker span {
   background: rgba(0, 0, 0, 0.7);
-  padding: 2px 5px;
+  padding: 2px 4px;
   border-radius: 3px;
+  font-size: 10px;
 }
 
-/* Theme Toggle */
+/* Theme Toggle - More Compact */
 .theme-toggle {
   background: none;
   border: none;
   color: inherit;
   cursor: pointer;
-  font-size: 1rem;
-  margin-top: 10px;
+  font-size: 0.8rem;
+  margin: 5px 0;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.05);
+}
+
+.app.dark .theme-toggle {
+  background: rgba(255,255,255,0.1);
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .main-content {
     grid-template-columns: 1fr;
+  }
+  
+  .map-container {
+    height: 55vh;
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-container {
+    height: 50vh;
+    min-height: 350px;
   }
   
   .stats-panel {
@@ -275,46 +279,21 @@
 }
 
 @media (max-width: 480px) {
+  .dashboard {
+    padding: 10px;
+  }
+  
+  .map-container {
+    height: 60vh;
+    min-height: 300px;
+    border-radius: 6px;
+  }
+  
   .stats-panel {
     grid-template-columns: 1fr;
   }
   
-  .map-container {
-    height: 300px;
+  .header h1 {
+    font-size: 1.3rem;
   }
-}
-
-/* Add to your existing CSS */
-.map-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.map {
-  width: 100%;
-  height: 100%;
-}
-
-.map-controls {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 1;
-}
-
-.map-control-btn {
-  display: block;
-  margin: 5px 0;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.map-control-btn:hover {
-  background: white;
 }
