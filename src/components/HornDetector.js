@@ -7,11 +7,17 @@ import { getMapboxPOIs } from '../utils/geoUtils';
 mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtY2Rhc2d6azBnemkya3NhN3FtN2pud3AifQ.9Pffdl35floWurrolAs55Q';
 
 const NO_HONK_ZONES = [
-  { lat: 18.6300, lng: 73.8200, name: "Central School Zone", radius: 1000 },
+  { lat: 18.6300, lng: 73.8200, name: "Central School Zone", radius: 100 },
   { lat: 18.6250, lng: 73.8250, name: "City Hospital Area", radius: 200},
   { lat: 18.6200, lng: 73.8150, name: "Downtown Quiet Zone", radius: 100 },
-  { lat: 18.624253, lng: 73.821145, name: "D.Y Patil Medical Hospital", radius: 600}
-  
+  { lat: 18.624253, lng: 73.821145, name: "D.Y Patil Medical Hospital", radius: 300},
+  { 
+    lat: 18.5604,
+    lng: 73.7906,
+    name: "Shambhu Vihar Society", 
+    address: "Baner CHS, Aundh, Pune, Maharashtra 411007",
+    radius: 3000
+  }
 ];
 
 const HornDetector = () => {
