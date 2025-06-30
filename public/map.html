@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Restricted Zones Map</title>
+  <!-- Paste this in the <head> section -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet">
+  <style>
+    body { margin:0; padding:0; }
+    #map { width:100%; height:100vh; }
+    .controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1;
+      background: white;
+      padding: 10px;
+    }
+    button { display: block; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <!-- Paste this in the <body> section -->
+  <div id="map"></div>
+  <div class="controls">
+    <button id="satellite-btn">🌍 Satellite View</button>
+    <button id="street-btn">🏠 Street View</button>
+  </div>
+
+  <!-- Paste this right before </body> -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+  <script>
+    // Replace this with your real Mapbox token (get it from mapbox.com)
+    mapboxgl.accessToken = 'pk.eyJ1IjoibWQtcmF5eWFuLTA0IiwiYSI6ImNtY2Rhc2d6azBnemkya3NhN3FtN2pud3AifQ.9Pffdl35floWurrolAs55Q';
+    
+    // This makes the map appear
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [77.5946, 12.9716], // Bangalore coordinates
+      zoom: 12
+    });
+
+    // Button to switch to satellite view
+    document.getElementById('satellite-btn').onclick = () => {
+      map.setStyle('mapbox://styles/mapbox/satellite-v9');
+    };
+
+    // Button to switch to street view
+    document.getElementById('street-btn').onclick = () => {
+      map.setStyle('mapbox://styles/mapbox/streets-v12');
+    };
+
+    // Add restricted zones when map loads
+    map.on('load', () => {
+      // Schools (red zones)
+      map.addLayer({
+        id: 'schools',
+        type: 'circle',
+        source: {
+          type: 'vector',
+          url: 'mapbox://mapbox.mapbox-streets-v8'
+        },
+        'source-layer': 'poi_label',
+        filter: ['==', 'class', 'school'],
+        paint: {
+          'circle-color': 'red',
+          'circle-radius': 8
+        }
+      });
+
+      // Hospitals (blue zones)
+      map.addLayer({
+        id: 'hospitals',
+        type: 'circle',
+        source: {
+          type: 'vector',
+          url: 'mapbox://mapbox.mapbox-streets-v8'
+        },
+        'source-layer': 'poi_label',
+        filter: ['==', 'class', 'hospital'],
+        paint: {
+          'circle-color': 'blue',
+          'circle-radius': 8
+        }
+      });
+
+      // Add more places like this...
+    });
+  </script>
+</body>
+</html>
